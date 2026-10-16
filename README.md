@@ -33,8 +33,8 @@ Sanketika is built to be accessible across multiple platforms and devices:
 | Access Method | Platform | How to Access / Run |
 | :--- | :--- | :--- |
 | **🌐 Web Application** | Any device with a modern browser (PC, Mac, Linux, Tablet, Mobile) | Run locally on Port `3005` (`http://localhost:3005`) or deploy to any cloud host (Vercel, Render, Railway, AWS). |
-| **📱 Android Mobile App** | Android phones and tablets | Download and install the pre-built **[GestureAI.apk](GestureAI.apk)** directly from this repository for on-the-go offline tracking. |
-| **💻 Standalone Desktop GUI** | Windows, macOS, Linux | Run `python application.py` for a lightweight, offline OpenCV + MediaPipe desktop window ideal for classrooms and clinics. |
+| **📱 Android Native Mobile App** | Android phones and tablets | Package natively via Capacitor Android (`npm run build && npx cap sync android`) for on-the-go offline tracking. |
+| **⚡ High-Performance ML Backend** | Windows, macOS, Linux, Cloud | Run `python backend_server.py` for asynchronous FastAPI machine learning inference, regional translation, and emergency telemetry. |
 | **🔌 Open REST APIs** | Any programming language or third-party platform | Integrate real-time sign classification (`/api/predict`), regional translation (`/api/translate`), and Emergency SOS (`/api/emergency`) into your own apps or smart kiosks. |
 
 ---
@@ -183,13 +183,18 @@ npm run dev
 
 > **Why Port 3005?** Port `3005` is configured explicitly in `package.json` so Sanketika runs without port conflicts on machines where Port `3000` is reserved by other local applications (such as Open WebUI).
 
-### 3. (Optional) Run the Desktop Application
+### 3. (Optional) Run the Python ML Backend
 ```bash
-python application.py
+python backend_server.py
 ```
+*The FastAPI backend will start at `http://127.0.0.1:8008`.*
 
-### 4. (Optional) Install the Mobile APK
-Transfer **[GestureAI.apk](GestureAI.apk)** to an Android smartphone and tap to install for mobile testing.
+### 4. (Optional) Build Native Android Mobile Package
+```bash
+cd web-app
+npm run build
+npx cap sync android
+```
 
 ---
 
@@ -226,31 +231,29 @@ cp web-app/.env.example web-app/.env.local
 ```
 Sanketika/
 ├── .env.example            # Environment variables configuration template
-├── backend_server.py       # Python FastAPI ML & accessibility service (Port 8008)
-├── application.py          # Desktop CustomTkinter GUI viewer
-├── realtime_detection.py   # Desktop OpenCV + MediaPipe ASL pipeline
+├── .gitignore              # Git ignore rules for node_modules, weights, and caches
 ├── ASL_model.p             # Trained Random Forest ensemble (16.3 MB)
-├── signs.json              # Gesture dictionary mappings
-├── GestureAI.apk           # Pre-built Android package for mobile deployment
+├── backend_server.py       # Python FastAPI ML & accessibility service (Port 8008)
+├── DOCUMENTATION.md        # Full technical specifications & mathematical formulations
+├── LICENSE                 # MIT Open Source License
+├── Procfile                # Cloud deployment process configuration (Render / Railway)
+├── README.md               # Comprehensive project documentation and guides
+├── requirements.txt        # Python backend dependencies (FastAPI, uvicorn, scikit-learn)
 ├── sample_data/            # Sample inputs & test payloads for API validation
 │   ├── sample_landmarks_asl.json # Sample 42-element ASL gesture coordinates
 │   ├── sample_emergency_sos.json # Sample GPS telemetry and pain rating payload
 │   ├── sample_translation.json   # Sample regional language translation query
 │   └── README.md           # Instructions for cURL & Postman validation
-├── collect_images.py       # Dataset collection script for new gestures
-├── create_dataset.py       # Landmark extraction script (generates pickle data)
-├── train_classifier.py     # Random Forest model training script
-├── train_isl.py            # ISL neural network training script
-├── DOCUMENTATION.md        # Full technical specifications & mathematical formulations
-├── LICENSE                 # MIT Open Source License
+├── signs.json              # Gesture dictionary mappings
 └── web-app/                # Next.js 16 + React 19 Frontend Web Application
     ├── src/
     │   ├── app/            # Routes: /, /live, /call, /about, /motives, /privacy, /terms
     │   │   └── api/        # Endpoints: /health, /predict, /emergency, /translate, /signs, /routes
     │   ├── components/     # UI: DetectorEngine, InclusiveServicesPanel, Modal, Navigation
     │   ├── utils/          # Regional languages, TTS, sonification, backend client
-    │   └── __tests__/      # Automated Node.js test suites (21 test suites)
+    │   └── __tests__/      # Automated Node.js test suites (21 tests passing)
     ├── public/             # MediaPipe WASM runtime, TFLite models (model.tflite, isl_model.tflite)
+    ├── android/            # Native Android Capacitor container project
     └── package.json        # Dependencies and scripts (Configured on Port 3005)
 ```
 
@@ -275,26 +278,15 @@ curl http://localhost:3005/api/health
 
 ---
 
-## 🔬 Training Custom Gestures & Extending Models
+## 🔬 Custom Gestures & ML Model Architecture
 
-Developers and researchers can train new signs using the included dataset pipelines:
+Sanketika uses a hybrid classification pipeline combining client-side WebAssembly models (`model.tflite` & `isl_model.tflite`) with a server-grade Scikit-Learn Random Forest ensemble (`ASL_model.p`):
 
-1. **Collect Images**:
-   ```bash
-   python collect_images.py
-   ```
-2. **Extract Landmark Coordinates**:
-   ```bash
-   python create_dataset.py
-   ```
-3. **Train Random Forest Classifier**:
-   ```bash
-   python train_classifier.py
-   ```
-4. **Export Model to Web**:
-   ```bash
-   python export_model.py
-   ```
+- **Inference Dimensions**: 42 normalized Cartesian features ($x, y$ coordinates of 21 MediaPipe hand landmarks).
+- **Coordinate Normalization**: Invariant to camera distance, hand size, and user position:
+  $$\vec{x}' = \frac{\vec{x} - x_{\text{wrist}}}{\max_{i} \|\vec{x}_i - \vec{x}_{\text{wrist}}\|}$$
+- **Model Storage**: Serialized in `ASL_model.p` and loaded directly by `backend_server.py`.
+- **Pre-trained Vocabulary**: 30 distinct classes covering alphabets A–Z and editing control tokens (`1` Backspace, `2` Clear, `3` Space, `4` None).
 
 ---
 
@@ -332,9 +324,8 @@ npm run build
 | Symptom | Cause | Resolution |
 | :--- | :--- | :--- |
 | **Another app appears on `localhost:3000`** | Another process (e.g. Open WebUI) is using port 3000. | Access Sanketika directly on port 3005: **`http://localhost:3005`**. |
-| **`ModuleNotFoundError: No module named 'mediapipe'`** | Missing Python packages in your active environment. | Run: `pip install mediapipe customtkinter`. |
-| **Desktop app shows camera unavailable** | Camera 0 is occupied by another app (Zoom, Teams). | Close background camera applications and relaunch `application.py`. |
-| **Predictions appear generic / edge mode active** | Python FastAPI server on port 8008 is not running. | Run `python backend_server.py` in a terminal window. |
+| **Predictions appear in edge fallback mode** | Python FastAPI server on port 8008 is not running. | Run `python backend_server.py` in a terminal window. |
+| **Port 8008 already occupied** | Another service is using port 8008. | Set `BACKEND_PORT=8009` in your `.env` configuration. |
 | **No audio for selected regional language** | OS lacks native speech synthesis voice packs. | Cloud TTS fallback will stream audio automatically via Google TTS; check your internet connection. |
 | **Garbled Indic characters in Windows terminal** | Default Windows console encoding is not UTF-8. | Run `chcp 65001` before executing terminal commands. |
 
