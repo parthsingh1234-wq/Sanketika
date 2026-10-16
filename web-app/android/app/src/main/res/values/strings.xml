@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Sanketika</string>
+    <string name="title_activity_main">Sanketika</string>
+    <string name="package_name">com.sanketika.app</string>
+    <string name="custom_url_scheme">com.sanketika.app</string>
+</resources>

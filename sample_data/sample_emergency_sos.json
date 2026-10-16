@@ -1,0 +1,9 @@
+{
+  "latitude": 28.6139,
+  "longitude": 77.2090,
+  "address": "Connaught Place, Central Secretariat, New Delhi, India",
+  "painLevel": 7,
+  "userNote": "Non-verbal individual experiencing severe chest tightness. Need medical triage immediately.",
+  "emergencyType": "MEDICAL_TRIAGE_SOS",
+  "clientTimestamp": 1776333400.125
+}
